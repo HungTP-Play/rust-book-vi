@@ -1,46 +1,45 @@
 # Generic Types, Traits, and Lifetimes
 
-Every programming language has tools for effectively handling the duplication
-of concepts. In Rust, one such tool is *generics*: abstract stand-ins for
-concrete types or other properties. We can express the behavior of generics or
-how they relate to other generics without knowing what will be in their place
-when compiling and running the code.
+Mỗi ngôn ngữ lập trình đều có các công cụ để xử lý hiệu quả việc trùng lặp các
+khái niệm. Trong Rust, một trong những công cụ đó là *generics*: là các đại diện
+trừu tượng cho các kiểu cụ thể hoặc các tính chất khác. Chúng ta có thể biểu
+thị hành vi của generics hoặc cách chúng liên quan đến các generics khác mà không cần biết những gì sẽ được đặt vào chỗ đó khi biên dịch và chạy code.
 
-Functions can take parameters of some generic type, instead of a concrete type
-like `i32` or `String`, in the same way a function takes parameters with
-unknown values to run the same code on multiple concrete values. In fact, we’ve
-already used generics in Chapter 6 with `Option<T>`, Chapter 8 with `Vec<T>`
-and `HashMap<K, V>`, and Chapter 9 with `Result<T, E>`. In this chapter, you’ll
-explore how to define your own types, functions, and methods with generics!
+Các hàm có thể nhận các tham số của một kiểu generic, thay vì một kiểu cụ thể
+như `i32` hoặc `String`, một cách tương tự như một hàm nhận các tham số với các
+giá trị không xác định để chạy cùng mã trên nhiều giá trị cụ thể khác nhau. Thực
+ra, chúng ta đã sử dụng generics trong chương 6 với `Option<T>`, chương 8 với
+`Vec<T>` và `HashMap<K, V>`, và chương 9 với `Result<T, E>`. Trong chương này,
+bạn sẽ khám phá cách định nghĩa các kiểu, các hàm và các phương thức của riêng
+bạn với generics!
 
-First, we’ll review how to extract a function to reduce code duplication. We’ll
-then use the same technique to make a generic function from two functions that
-differ only in the types of their parameters. We’ll also explain how to use
-generic types in struct and enum definitions.
+Đầu tiên, chúng ta sẽ xem lại cách trích xuất một hàm để giảm bớt sự trùng lặp
+mã. Chúng ta sẽ sử dụng cùng một kỹ thuật để tạo một hàm generic từ hai hàm khác
+chỉ khác nhau ở các kiểu của các tham số của chúng. Chúng ta cũng sẽ giải thích
+cách sử dụng các kiểu generic trong các định nghĩa struct và enum.
 
-Then you’ll learn how to use *traits* to define behavior in a generic way. You
-can combine traits with generic types to constrain a generic type to accept
-only those types that have a particular behavior, as opposed to just any type.
+Sau đó, bạn sẽ học cách sử dụng *traits* để định nghĩa hành vi một cách generic.
+Bạn có thể kết hợp traits với các kiểu generic để hạn chế một kiểu generic để
+chấp nhận chỉ những kiểu có hành vi nhất định, thay vì chỉ bất kỳ kiểu nào.
 
-Finally, we’ll discuss *lifetimes*: a variety of generics that give the
-compiler information about how references relate to each other. Lifetimes allow
-us to give the compiler enough information about borrowed values so that it can
-ensure references will be valid in more situations than it could without our
-help.
+Cuối cùng, chúng ta sẽ thảo luận về *lifetimes*: một loại generics cung cấp
+thông tin cho trình biên dịch về cách tham chiếu liên quan đến nhau. Lifetimes
+cho phép chúng ta cung cấp cho trình biên dịch đủ thông tin về các giá trị
+borrowed để nó có thể đảm bảo các tham chiếu sẽ hợp lệ trong nhiều tình huống
+hơn mà nó không thể mà không có sự giúp đỡ của chúng ta.
 
 ## Removing Duplication by Extracting a Function
 
-Generics allow us to replace specific types with a placeholder that represents
-multiple types to remove code duplication. Before diving into generics syntax,
-then, let’s first look at how to remove duplication in a way that doesn’t
-involve generic types by extracting a function that replaces specific values
-with a placeholder that represents multiple values. Then we’ll apply the same
-technique to extract a generic function! By looking at how to recognize
-duplicated code you can extract into a function, you’ll start to recognize
-duplicated code that can use generics.
+Generics cho phép chúng ta thay thế các kiểu cụ thể bằng một "giữ chỗ"
+(placeholder) để biểu thị nhiều kiểu khác nhau để loại bỏ sự trùng lặp code.
+Trước khi đi sâu vào cú pháp generics, hãy xem xét cách để loại bỏ sự trùng lặp
+code bằng cách không sử dụng kiểu generic bằng cách trích xuất một hàm để thay
+thế các giá trị cụ thể bằng một "giữ chỗ" để biểu thị cho nhiều kiểu khác
+nhau. Sau đó, chúng ta sẽ áp dụng cùng một kỹ thuật để trích xuất một hàm
+generic!
 
-We begin with the short program in Listing 10-1 that finds the largest number
-in a list.
+Chúng ta bắt đầu với chương trình ngắn gọn trong Listing 10-1 tìm số lớn nhất
+trong một danh sách.
 
 <span class="filename">Filename: src/main.rs</span>
 
@@ -48,21 +47,21 @@ in a list.
 {{#rustdoc_include ../listings/ch10-generic-types-traits-and-lifetimes/listing-10-01/src/main.rs:here}}
 ```
 
-<span class="caption">Listing 10-1: Finding the largest number in a list of
-numbers</span>
+<span class="caption">Listing 10-1: Tìm số lớn nhất trong một dãy số</span>
 
-We store a list of integers in the variable `number_list` and place a reference
-to the first number in the list in a variable named `largest`. We then iterate
-through all the numbers in the list, and if the current number is greater than
-the number stored in `largest`, replace the reference in that variable.
-However, if the current number is less than or equal to the largest number seen
-so far, the variable doesn’t change, and the code moves on to the next number
-in the list. After considering all the numbers in the list, `largest` should
-refer to the largest number, which in this case is 100.
+Chúng ta lưu trữ một danh sách các số nguyên trong biến `number_list` và đặt
+một tham chiếu đến số đầu tiên trong dãy số trong một biến có tên `largest`.
+Sau đó, chúng ta duyệt qua tất cả các số trong dãy số, và nếu số hiện tại lớn
+hơn số được lưu trong `largest`, thì thay thế tham chiếu trong biến đó. Tuy
+nhiên, nếu số hiện tại nhỏ hơn hoặc bằng với số lớn nhất đã được xem, thì
+biến đó không thay đổi, và code sẽ chuyển sang số tiếp theo trong dãy số. Sau
+khi xem qua tất cả các số trong dãy số, `largest` sẽ tham chiếu đến số lớn
+nhất, trong trường hợp này là 100.
 
-We've now been tasked with finding the largest number in two different lists of
-numbers. To do so, we can choose to duplicate the code in Listing 10-1 and use
-the same logic at two different places in the program, as shown in Listing 10-2.
+Bây giờ chúng ta được giao nhiệm vụ tìm số lớn nhất trong hai dãy số khác nhau.
+Để làm điều đó, chúng ta có thể chọn để sao chép code trong Listing 10-1 và
+sử dụng cùng một logic tại hai nơi khác nhau trong chương trình, như trong
+Listing 10-2.
 
 <span class="filename">Filename: src/main.rs</span>
 
@@ -70,22 +69,22 @@ the same logic at two different places in the program, as shown in Listing 10-2.
 {{#rustdoc_include ../listings/ch10-generic-types-traits-and-lifetimes/listing-10-02/src/main.rs}}
 ```
 
-<span class="caption">Listing 10-2: Code to find the largest number in *two*
-lists of numbers</span>
+<span class="caption">Listing 10-2: Code để tìm số lớn nhất trong *hai* dãy
+số</span>
 
-Although this code works, duplicating code is tedious and error prone. We also
-have to remember to update the code in multiple places when we want to change
-it.
+Mặc dù code này chạy được, việc sao chép code là một việc mệt mỏi và dễ gây
+lỗi. Chúng ta cũng phải nhớ cập nhật code ở nhiều nơi khi chúng ta muốn thay
+đổi nó.
 
-To eliminate this duplication, we’ll create an abstraction by defining a
-function that operates on any list of integers passed in a parameter. This
-solution makes our code clearer and lets us express the concept of finding the
-largest number in a list abstractly.
+Để loại bỏ sự trùng lặp này, chúng ta sẽ tạo một trừu tượng bằng cách định
+nghĩa một hàm hoạt động trên bất kỳ dãy số nguyên nào được truyền vào một
+tham số. Giải pháp này làm cho code của chúng ta rõ ràng hơn và cho phép chúng
+ta biểu thị khái niệm tìm số lớn nhất trong một dãy số trừu tượng.
 
-In Listing 10-3, we extract the code that finds the largest number into a
-function named `largest`. Then we call the function to find the largest number
-in the two lists from Listing 10-2. We could also use the function on any other
-list of `i32` values we might have in the future.
+Trong Listing 10-3, chúng ta trích xuất code tìm số lớn nhất thành một hàm có
+tên `largest`. Sau đó chúng ta gọi hàm để tìm số lớn nhất trong hai dãy số từ
+Listing 10-2. Chúng ta cũng có thể sử dụng hàm trên bất kỳ dãy số `i32` khác
+nào chúng ta có trong tương lai.
 
 <span class="filename">Filename: src/main.rs</span>
 
@@ -93,26 +92,26 @@ list of `i32` values we might have in the future.
 {{#rustdoc_include ../listings/ch10-generic-types-traits-and-lifetimes/listing-10-03/src/main.rs:here}}
 ```
 
-<span class="caption">Listing 10-3: Abstracted code to find the largest number
-in two lists</span>
+<span class="caption">Listing 10-3: Code trừu tượng để tìm số lớn nhất trong
+hai dãy số</span>
 
-The `largest` function has a parameter called `list`, which represents any
-concrete slice of `i32` values we might pass into the function. As a result,
-when we call the function, the code runs on the specific values that we pass
-in.
+Hàm `largest` có một tham số gọi là `list`, nó biểu thị bất kỳ dãy số `i32`
+cụ thể nào chúng ta có thể truyền vào hàm. Do đó, khi chúng ta gọi hàm, code
+chạy trên các giá trị cụ thể mà chúng ta truyền vào.
 
-In summary, here are the steps we took to change the code from Listing 10-2 to
-Listing 10-3:
+Tóm lại, đây là các bước chúng ta đã thực hiện để thay đổi code từ Listing
+10-2 thành Listing 10-3:
 
-1. Identify duplicate code.
-2. Extract the duplicate code into the body of the function and specify the
-   inputs and return values of that code in the function signature.
-3. Update the two instances of duplicated code to call the function instead.
+1. Xác định code trùng lặp.
+2. Tách code trùng lặp thành phần thân của hàm và chỉ định các đầu vào và giá
+   trị trả về của code đó trong chữ ký của hàm.
+3. Cập nhật hai trường hợp code trùng lặp để gọi hàm thay vì thế.
 
-Next, we’ll use these same steps with generics to reduce code duplication. In
-the same way that the function body can operate on an abstract `list` instead
-of specific values, generics allow code to operate on abstract types.
+Tiếp theo, chúng ta sẽ sử dụng các bước này với generics để giảm bớt sự trùng
+lặp code. Giống như phần thân hàm có thể hoạt động trên một `list` trừu tượng
+thay vì các giá trị cụ thể, generics cho phép code hoạt động trên các kiểu
+trừu tượng.
 
-For example, say we had two functions: one that finds the largest item in a
-slice of `i32` values and one that finds the largest item in a slice of `char`
-values. How would we eliminate that duplication? Let’s find out!
+Ví dụ, giả sử chúng ta có hai hàm: một hàm tìm phần tử lớn nhất trong một dãy
+số `i32` và một hàm tìm phần tử lớn nhất trong một dãy số `char`. Làm thế nào
+chúng ta có thể loại bỏ sự trùng lặp này? Cùng nhau tìm hiểu nào!
